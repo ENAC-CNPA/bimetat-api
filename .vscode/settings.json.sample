@@ -1,0 +1,20 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "html.suggest.angular1": false,
+  "html.suggest.ionic": false,
+  "rest-client.environmentVariables": {
+    "$shared": {
+      "version": "v1"
+    },
+    "local": {
+      "host": "http://localhost:3000"
+    },
+    "stage": {
+      "host": "https://api.example.com/stage"
+    },
+    "prod": {
+      "host": "https://api.example.com/prod"
+    }
+  },
+  "git.ignoreLimitWarning": true
+}

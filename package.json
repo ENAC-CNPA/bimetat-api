@@ -1,0 +1,55 @@
+{
+  "name": "bimetat-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "watch": "tsc -- --watch",
+    "nodemon": "nodemon build/server.js",
+    "ifc": "DEBUG=* node build/ifc-test.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "build/*",
+      "node_modules/api.deco.ts/build/*"
+    ],
+    "env": {
+      "NODE_ENV": "development",
+      "DEBUG": "app:*,api.deco.ts:*,x-autofetch:*,x-email-templates*"
+    },
+    "ext": "js,json",
+    "xxxxxevents": {
+      "restart": "osascript -e 'display notification \"App restarted due to:\n'$FILENAME'\" with title \"nodemon\"'"
+    },
+    "verbose": true,
+    "delay": "500"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/compression": "^1.7.0",
+    "@types/cron": "^1.7.0",
+    "@types/es6-shim": "^0.31.37",
+    "@types/mv": "^2.1.0",
+    "@types/node-xlsx": "^0.15.1",
+    "@types/stripe": "^6.25.2",
+    "awesome-phonenumber": "^2.38.0",
+    "compression": "^1.7.4",
+    "cron": "^1.7.1",
+    "deco-api": "git+https://github.com/platform5/deco-api.git",
+    "deco-bcf": "git+https://github.com/bimaps/deco-bcf.git",
+    "deco-three": "git+https://github.com/bimaps/deco-three.git",
+    "dotenv": "^8.2.0",
+    "ifc-convert": "^1.2.0",
+    "ifc2json-wrapper": "git+https://github.com/bimaps/ifc2json-wrapper.git",
+    "mv": "^2.1.1",
+    "nodemon": "^1.17.5",
+    "object-resolve-path": "^1.1.1",
+    "string-template-parser": "^1.2.6",
+    "stripe": "^6.26.0",
+    "typescript": "^3.0.0"
+  }
+}
