@@ -1,6 +1,30 @@
 # BIMETAT-API
 
+## For developers
 
+<br>
+
+### Environment Requirements
+1. NodeJS : v10.15.3
+2. NPM : 7.6.2 (need to run `npm install -g npm`)
+3. Install package : `npm install -g node-gyp typescript artillery artillery-plugin-expect ts-node`
+4. Clone this `api` repo
+5. Clone Ifc2Json in api folder : `git clone https://github.com/bimaps/ifc2json.git bin`
+6. Create in api folder : `mkdir ignored`
+7. Install api package : `npm install`
+
+
+### Run API
+1. Build api : `npm run tsc`
+2. Start api : `npm run nodemon`
+
+<br>
+<br>
+
+---
+
+<br>
+<br>
 
 ## Build Docker image
 
@@ -46,9 +70,7 @@ mkdir ~/sdio/backups
 
 ## Initialization of the environment
 
-Les points **Docker network** et **Jeu de données Bim-état** concernant uniquement la 1re mise en place de l'environnement (100% vierge).
-
-The points **Docker network** and **Startup data set** concerning only the first installation of the environment (100% clean).
+The steps **Docker network** and **Startup data set** concerning only the first installation of the environment (100% clean).
 
 <br>
 <br>
@@ -93,5 +115,16 @@ Steps to restore the dataset :
 
 #### Dev
 `docker run --restart always --name sdioapi -p 3001:3001 -d --network=sdionet -v ~/sdio/apps/uploads:/home/api/uploads -v ~/sdio/apps/uploads-files:/home/api/uploads-files -v ~/sdio/apps/temp-files:/home/api/ignored -v ~/sdio/apps/logs:/home/api/logs --env DBNAME=sdio --env NODE_ENV=development bimetat-api:latest`
+
+
+#### Env. variables
+- DB Name : `--env DBNAME=sdio`
+- Node env : `---env NODE_ENV=development`
+- Notification mail : `--env DEV_EMAIL_TO=devnotif@example.com`
+- SMTP mail : `--env MAIL_HOST=mail.example.com`
+- SMPT port : `--env MAIL_PORT=587`
+- User mail : `--env MAIL_USER=noreply@example.com`
+- Mail password : `--env MAIL_PASSWORD=yourpass`
+- Mail sender : `--env MAIL_FROM=hello@example.com`
 
 
