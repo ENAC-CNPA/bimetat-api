@@ -5,5 +5,5 @@ RewriteEngine On
 #ProxyPassReverse / https://localhost:3021/
 
 RewriteBase /
-RewriteRule (.*) http://localhost:3000/$1 [P]
+RewriteRule (.*) http://localhost:3001/$1 [P]
 </IfModule>

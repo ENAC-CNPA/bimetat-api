@@ -31,7 +31,7 @@ datastore.init({database: database, host: dbhost, user: dbuser, password: dbpass
     }
 
     // The port the express app will listen on
-    const port: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+    const port: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
     // enable logging
     app.use(Log.accessMiddleware());
     app.use(CorsMiddleware.allowEverything());

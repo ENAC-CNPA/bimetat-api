@@ -20,13 +20,14 @@ RUN dotnet_version=3.1.1 \
     && rm dotnet.tar.gz \
     && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 
-RUN npm install -g node-gyp typescript artillery artillery-plugin-expect
+RUN npm install -g npm
+RUN npm install -g node-gyp typescript artillery artillery-plugin-expect ts-node
 
 ENV PATH="/home/api/bin/linux:${PATH}"
 
 ENV DBHOST=sdiomongo
 ENV NODE_ENV=development
-ENV PORT=3000
+ENV PORT=3001
 ENV DEBUG=app*,api*
 ENV DEV_EMAIL_TO=email_address@when_developping.com
 ENV MAIL_HOST=smtphost

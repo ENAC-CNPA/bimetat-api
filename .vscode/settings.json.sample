@@ -7,7 +7,7 @@
       "version": "v1"
     },
     "local": {
-      "host": "http://localhost:3000"
+      "host": "http://localhost:3001"
     },
     "stage": {
       "host": "https://api.example.com/stage"

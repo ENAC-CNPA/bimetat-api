@@ -88,10 +88,10 @@ Steps to restore the dataset :
 <br>
 
 #### Prod (default)
-`docker run --restart always --name sdioapi -p 3000:3000 -d --network=sdionet -v ~/sdio/apps/uploads:/home/api/uploads -v ~/sdio/apps/uploads-files:/home/api/uploads-files -v ~/sdio/apps/temp-files:/home/api/ignored -v ~/sdio/apps/logs:/home/api/logs --env DBNAME=sdio --env NODE_ENV=production bimetat-api:latest`
+`docker run --restart always --name sdioapi -p 3001:3001 -d --network=sdionet -v ~/sdio/apps/uploads:/home/api/uploads -v ~/sdio/apps/uploads-files:/home/api/uploads-files -v ~/sdio/apps/temp-files:/home/api/ignored -v ~/sdio/apps/logs:/home/api/logs --env DBNAME=sdio --env NODE_ENV=production bimetat-api:latest`
 
 
 #### Dev
-`docker run --restart always --name sdioapi -p 3000:3000 -d --network=sdionet -v ~/sdio/apps/uploads:/home/api/uploads -v ~/sdio/apps/uploads-files:/home/api/uploads-files -v ~/sdio/apps/temp-files:/home/api/ignored -v ~/sdio/apps/logs:/home/api/logs --env DBNAME=sdio --env NODE_ENV=development bimetat-api:latest`
+`docker run --restart always --name sdioapi -p 3001:3001 -d --network=sdionet -v ~/sdio/apps/uploads:/home/api/uploads -v ~/sdio/apps/uploads-files:/home/api/uploads-files -v ~/sdio/apps/temp-files:/home/api/ignored -v ~/sdio/apps/logs:/home/api/logs --env DBNAME=sdio --env NODE_ENV=development bimetat-api:latest`
 
 
