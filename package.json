@@ -44,7 +44,7 @@
     "deco-three": "git+https://github.com/bimaps/deco-three.git#8184b037019726a2438a22c0abd34515dfebc2af",
     "dotenv": "^8.2.0",
     "ifc-convert": "^1.2.0",
-    "ifc2json-wrapper": "git+https://github.com/bimaps/ifc2json-wrapper.git",
+    "ifc2json-wrapper": "git+https://github.com/bimaps/ifc2json-wrapper.git#acc0f3cc7eb76328f34f2386b210d40324461f31",
     "mv": "^2.1.1",
     "nodemon": "^1.17.5",
     "object-resolve-path": "^1.1.1",
