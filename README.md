@@ -5,13 +5,14 @@
 <br>
 
 ### Environment Requirements
-1. NodeJS : v10.15.3
+1. NodeJS v10.15.3 (optional : use NVM on [Linux/OSX](https://github.com/nvm-sh/nvm) or [Windows](https://github.com/coreybutler/nvm-windows)  )
 2. NPM : 7.6.2 (need to run `npm install -g npm`)
 3. Install package : `npm install -g node-gyp typescript artillery artillery-plugin-expect ts-node`
 4. Clone this `api` repo
 5. Clone Ifc2Json in api folder : `git clone https://github.com/bimaps/ifc2json.git bin`
 6. Create in api folder : `mkdir ignored`
-7. Install api package : `npm install`
+7. Copy and configure : `cp .env.sample .env`
+8. Install api package : `npm install`
 
 
 ### Run API
