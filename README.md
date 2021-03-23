@@ -54,6 +54,7 @@ mkdir ~/sdio/mongodb
 mkdir ~/sdio/mongodb/db
 mkdir ~/sdio/mongodb/log
 mkdir ~/sdio/mongodb/backup
+mkdir ~/sdio/redis
 mkdir ~/sdio/apps
 mkdir ~/sdio/apps/uploads-files
 mkdir ~/sdio/apps/uploads
