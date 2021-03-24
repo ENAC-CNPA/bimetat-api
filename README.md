@@ -99,9 +99,17 @@ Steps to restore the dataset :
 <br>
 <br>
 
-### MongoDB
+### MongoDB (database)
 
 `docker run --restart always --name sdiomongo -p 27017:27017 -d -v ~/sdio/mongodb:/data -v ~/sdio/mongodb/db:/data/db --network=sdionet mongo:3.4`
+
+
+<br>
+<br>
+
+### Redis (cache)
+
+`docker run --restart always --name sdioredis -p 6379:6379 -d --network=sdionet -v ~/sdio/redis:/data redis:latest redis-server --appendonly yes`
 
 
 <br>
