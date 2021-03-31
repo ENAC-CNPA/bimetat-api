@@ -4,5 +4,5 @@
     "name": "BIMetat API Documentation",
     "excludeExternals": true,
     "includeVersion": true,
-    "entryPoints": ["src/index.ts"]
+    "entryPoints": ["app/server.ts"]
 }
