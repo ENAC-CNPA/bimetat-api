@@ -39,17 +39,17 @@
     "awesome-phonenumber": "^2.38.0",
     "compression": "^1.7.4",
     "cron": "^1.7.1",
-    "deco-api": "git+https://github.com/platform5/deco-api.git#8d960fa537f5ed19a753200c81e44760be63769c",
+    "deco-api": "git+https://github.com/platform5/deco-api.git#d6dcaca814642041c38580e7ef21698d5fe938d2",
     "deco-bcf": "git+https://github.com/bimaps/deco-bcf.git#5142387e5088b20f881a78c1f5ec23298142b010",
-    "deco-three": "git+https://github.com/bimaps/deco-three.git#8184b037019726a2438a22c0abd34515dfebc2af",
+    "deco-three": "git+https://github.com/bimaps/deco-three.git#ec04ff86b83caf753500cf6b661587c1ba94a037",
     "dotenv": "^8.2.0",
     "ifc-convert": "^1.2.0",
-    "ifc2json-wrapper": "git+https://github.com/bimaps/ifc2json-wrapper.git#acc0f3cc7eb76328f34f2386b210d40324461f31",
+    "ifc2json-wrapper": "git+https://github.com/bimaps/ifc2json-wrapper.git#2bf114af0aa98eff177bcb3b2bc21e087ce32062",
     "mv": "^2.1.1",
     "nodemon": "^1.17.5",
     "object-resolve-path": "^1.1.1",
     "string-template-parser": "^1.2.6",
     "stripe": "^6.26.0",
-    "typescript": "^3.0.0"
+    "typescript": "^3.9.0"
   }
 }
