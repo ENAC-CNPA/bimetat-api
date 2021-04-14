@@ -1,0 +1,11 @@
+firstname,lastname,email,mobile,password,emailCode,mobileCode,username
+Ben 1 (test),Luther 1 (test),test01@decoapi.com,,0123456789,test01@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 2 (test),Luther 2 (test),,0702567760,0123456789,,0702567760a1b2c3,0702567760
+Ben 3 (test),Luther 3 (test),test03@decoapi.com,,0123456789,test03@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 4 (test),Luther 4 (test),test04@decoapi.com,,0123456789,test04@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 5 (test),Luther 5 (test),test05@decoapi.com,,0123456789,test05@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 6 (test),Luther 6 (test),test06@decoapi.com,,0123456789,test06@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 7 (test),Luther 7 (test),test07@decoapi.com,,0123456789,test07@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 8 (test),Luther 8 (test),test08@decoapi.com,,0123456789,test08@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 9 (test),Luther 9 (test),test09@decoapi.com,,0123456789,test09@decoapi.coma1b2c3,,test01@decoapi.com
+Ben 10 (test),Luther 10 (test),test10@decoapi.com,,0123456789,test10@decoapi.coma1b2c3,,test01@decoapi.com

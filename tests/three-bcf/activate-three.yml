@@ -1,0 +1,107 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - duration: 2
+          arrivalCount: 10
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  payload:
+    -
+      path: "../_data/token-a1.csv"
+      fields:
+        - "token"
+      cast: false
+      skipHeader: false
+      order: sequence
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Activate Three"
+    flow:
+    - function: "getAppA"
+    - get:
+        name: "Get App and check that three is not active"
+        url: "/app?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+          authorization: "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "appId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.length }}"
+            - 1
+          - equals:
+            - "{{ response[0].enableThree }}"
+            - false
+    - put:
+        name: "Enable Three"
+        url: "/app/{{ appId }}?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+          authorization: "Bearer {{ token }}"
+        json:
+          enableThree: true
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "enableThree"
+          - equals:
+            - "{{ response.enableThree }}"
+            - true
+    - function: "getAppB"
+    - function: "getTokenA1"
+    - function: "getAppAApiKey"
+    - get:
+        name: "Get Users using main user"
+        url: "/app/{{ appId }}/user?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "userId"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.length }}"
+            - 3
+    - put:
+        name: "Set Three Role to secondary user"
+        url: "/app/{{ appId }}/user/{{ userId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        json:
+          roles:
+            - "three"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.roles.length }}"
+            - 1
+          - equals:
+            - "{{ response.roles[0] }}"
+            - "three"

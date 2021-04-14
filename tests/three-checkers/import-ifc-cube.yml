@@ -1,0 +1,93 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 300 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Three API"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - get:
+        name: "Check if site exists"
+        url: "/three/site?name=cube&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "siteId"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.length }}"
+            - 0
+    - post:
+        ifTrue: "siteId == undefined"
+        name: "Create IFC Site Cube"
+        url: "/three/site?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          name: "Ifc Cube"
+        capture:
+          - json: "$.id"
+            as: "siteId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+    - post:
+        name: "Import IFC Data (Cube)"
+        url: "/three/site/{{ siteId }}/import/ifc?apiKey={{ apiKey }}"
+        beforeRequest: "uploadIfcCube"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        formData:
+          ifc: "binary data"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "operationId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Check (1) for IFC Data import"
+        url: "/three/site/{{ siteId }}/import/ifc/{{ operationId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          statusCode: 200
+    - get:
+        name: "Check (2) for IFC Data import"
+        url: "/three/site/{{ siteId }}/import/ifc/{{ operationId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.status }}"
+            - "completed"
+        

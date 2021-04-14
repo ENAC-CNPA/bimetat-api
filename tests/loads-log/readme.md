@@ -1,0 +1,1 @@
+When running in a docker container, you can link this folder to a host volume to access the test logs

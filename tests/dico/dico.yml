@@ -1,0 +1,57 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - pause: 5
+        - duration: 60
+          arrivalRate: 10
+          rampTo: 50
+          name: "Warm up phase"
+        - duration: 600
+          arrivalRate: 50
+          name: "Sustained max load"
+    production:
+      target: 'https://api.bimet.at/prod'
+      phases:
+        - duration: 120
+          arrivalRate: 10
+    stage:
+      target: 'https://api.bimet.at/stage'
+      phases:
+        - duration: 120
+          arrivalRate: 10
+          rampTo: 50
+          name: "Warm up the application"
+        - duration: 600
+          arrivalRate: 50
+          name: "Sustained max load"
+        -
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test dico"
+    flow:
+    # - post:
+    #     name: "Login"
+    #     url: "/auth/token?apiKey={{ apiKey }}"
+    #     json:
+    #       username: "{{ username }}"
+    #       password: "{{ password }}"
+    #     capture:
+    #       - json: "$.token"
+    #         as: "token"
+    #       - json: "$"
+    #         as: "response"
+    #     expect:
+    #       - statusCode: 200
+    #       - hasProperty: "token"

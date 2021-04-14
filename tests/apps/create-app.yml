@@ -1,0 +1,166 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {outputFormat: 'json'}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - duration: 2
+          arrivalCount: 10
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  payload:
+    -
+      path: "../_data/account-a1.csv"
+      fields:
+        - "firstname"
+        - "lastname"
+        - "email"
+        - "mobile"
+        - "password"
+        - "emailCode"
+        - "mobileCode"
+      cast: false
+      skipHeader: true
+      order: sequence
+    -
+      path: "../_data/app-a.csv"
+      fields:
+        - "appId"
+        - "apiKey"
+      cast: false
+      skipHeader: true
+      order: sequence
+    -
+      path: "../_data/app-b.csv"
+      fields:
+        - "newAppName"
+      cast: false
+      skipHeader: true
+      order: sequence
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Create App"
+    flow:
+    - post:
+        name: "Login"
+        url: "/auth/token?apiKey={{ apiKey }}"
+        json:
+          username: "{{ email }}"
+          password: "{{ password }}"
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - post:
+        name: "Create Secondary App (should fails due to missing Authorization)"
+        url: "/app?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+        json:
+          name: "{{ newAppName }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - post:
+        name: "Create Secondary App"
+        url: "/app?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+          authorization: "Bearer {{ token }}"
+        json:
+          name: "{{ newAppName }}"
+          smtpConfigHost: "localhost"
+          smtpConfigPort: 1025
+          smtpConfigUser: "notif@localhost"
+          smtpConfigPassword: "webform"
+          smtpConfigFromName: "BIMetat"
+          smtpConfigFromEmail: "notif@localhost"
+          requireDoubleAuth: false
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "appId"
+        expect:
+          - statusCode: 200
+          - hasProperty: "name"
+          - equals:
+            - "{{ response.name }}"
+            - "{{ newAppName }}"
+    - get:
+        name: "Get Secondary Api Key"
+        url: "/app/{{appId}}/key/public/0?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+          authorization: "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.key"
+            as: "newApiKey"
+        expect:
+          - statusCode: 200
+          - hasProperty: "key"
+    - post:
+        name: "Create Secondary Account (should fail as newApiKey is not yet active)"
+        url: "/user/create-account?apiKey={{ newApiKey }}"
+        headers:
+          content-type: "application/json"
+        json:
+          firstname: "{{ firstname }}"
+          lastname: "{{ lastname }}"
+          email: "{{ email }}"
+          mobile: "{{ mobile }}"
+          password: "{{ password }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - function: "apiKeyLast4"
+    - put:
+        name: "Activate Public Key"
+        url: "/app/{{ appId }}/key/public/0/{{ last4 }}?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+          authorization: "Bearer {{ token }}"
+        json:
+          active: true
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+    - get:
+        name: "Get Secondary Api Key"
+        url: "/app/{{appId}}/key/public/0?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+          authorization: "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.key"
+            as: "apiKey"
+        expect:
+          - statusCode: 200
+          - hasProperty: "key"
+    - function: "saveAppB"
+    - function: "getAppB"

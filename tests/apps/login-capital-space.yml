@@ -1,0 +1,99 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {outputFormat: 'json'}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - duration: 2
+          arrivalCount: 10
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  payload:
+    -
+      path: "../_data/account-b3.csv"
+      fields:
+        - "firstname"
+        - "lastname"
+        - "email"
+        - "mobile"
+        - "password"
+        - "emailCode"
+        - "mobileCode"
+      cast: false
+      skipHeader: true
+      order: sequence
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test login with capital letters and spaces"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB3"
+    - post:
+        name: "Login with capitals in username"
+        url: "/auth/token?apiKey={{ apiKey }}"
+        json:
+          username: "Test04@decoapi.com"
+          password: "{{ password }}"
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - post:
+        name: "Login with spaces in username (email)"
+        url: "/auth/token?apiKey={{ apiKey }}"
+        json:
+          username: " {{ email }} "
+          password: "{{ password }}"
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - post:
+        name: "Login with spaces in username (mobile)"
+        url: "/auth/token?apiKey={{ apiKey }}"
+        json:
+          username: " {{ mobile }} "
+          password: "{{ password }}"
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - post:
+        name: "Login with spaces in password"
+        url: "/auth/token?apiKey={{ apiKey }}"
+        json:
+          username: "{{ mobile }}"
+          password: " {{ password }} "
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - function: "saveTokenB3"
+    

@@ -1,0 +1,334 @@
+#TODO:
+# - find a way to assert orderNb with increment
+# - restore min/max test for value and measure when applicable
+# - add query to test filter / search / sort
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - pause: 5
+        - duration: 60
+          arrivalRate: 10
+          rampTo: 50
+          name: "Warm up phase"
+        - duration: 600
+          arrivalRate: 50
+          name: "Sustained max load"
+    production:
+      target: 'https://api.bimet.at/prod'
+      phases:
+        - duration: 120
+          arrivalRate: 10
+    stage:
+      target: 'https://api.bimet.at/stage'
+      phases:
+        - duration: 120
+          arrivalRate: 10
+          rampTo: 50
+          name: "Warm up the application"
+        - duration: 600
+          arrivalRate: 50
+          name: "Sustained max load"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Dynamic Data"
+    flow:
+    - function: "getAppA"
+    - function: "getTokenA1"
+    - function: "getAppBAppIdInAppBId" # appId of app B will be placed in var {{ appBId }}
+    - get:
+        name: "Check if model exists"
+        url: "/dynamicconfig?slug=test1&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "modelId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.length }}"
+            - 0
+    - post:
+        name: "Create Model Test 1"
+        url: "/dynamicconfig?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          enableAdminNotification: false
+          enableUserNotification: false
+          fields: []
+          isPublic: false
+          label: ""
+          name: "Create Model Test 1"
+          notificationType: "email"
+          notifyWhen: "create"
+          policy: {}
+          readingAccess: "all"
+          readingRoles: []
+          relatedToAppId: "{{ appBId }}"
+          slug: "test1"
+          writingAccess: "all"
+          writingRoles: []
+        capture:
+          - json: "$.id"
+            as: "modelId1"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+          - hasProperty: "fields"
+    - post:
+        name: "Create Model Test 2"
+        url: "/dynamicconfig?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          enableAdminNotification: false
+          enableUserNotification: false
+          fields: []
+          isPublic: false
+          label: ""
+          name: "Create Model Test 1"
+          notificationType: "email"
+          notifyWhen: "create"
+          policy: {}
+          readingAccess: "all"
+          readingRoles: []
+          relatedToAppId: "{{ appBId }}"
+          slug: "test2"
+          writingAccess: "all"
+          writingRoles: []
+        capture:
+          - json: "$.id"
+            as: "modelId2"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+          - hasProperty: "fields"
+    - put:
+        name: "Add fields to Model Test 1"
+        url: "/dynamicconfig/{{ modelId1 }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          isPublic: true
+          fields:
+            - name: "any"
+              type: "any"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "name"
+              type: "string"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "nbUsers"
+              type: "integer"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "amount"
+              type: "float"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "values"
+              type: "array"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "enabled"
+              type: "boolean"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "from"
+              type: "date"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+            - name: "color"
+              type: "select"
+              filterable: "auto"
+              options: 
+                options: ["blue", "orange", "red"]
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+          - hasProperty: "fields"
+          - equals:
+            - "{{ response.fields.length }}"
+            - 8
+    - put:
+        name: "Add fields to Model Test 2"
+        url: "/dynamicconfig/{{ modelId2 }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          isPublic: true
+          fields:
+            - name: "Plans"
+              type: "string"
+              filterable: "auto"
+              options: {}
+              required: false
+              searchable: true
+              sortable: true
+              validation: []
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+          - hasProperty: "fields"
+          - equals:
+            - "{{ response.fields.length }}"
+            - 1
+    - function: "getAppB"
+    - post:
+        name: "Add dynamic data to Test 1"
+        url: "/dynamicdata/test1?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          any: "Salut les amis"
+          name: "Test Data"
+          nbUsers: 10
+          amount: 45.4
+          values: 
+            - "yes"
+            - "no"
+          enabled: true
+          from: "06-04-2014"
+          color: "blue"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.any"
+            as: "any"
+          - json: "$.name"
+            as: "name"
+          - json: "$.nbUsers"
+            as: "nbUsers"
+          - json: "$.amount"
+            as: "amount"
+          - json: "$.values"
+            as: "values"
+          - json: "$.values.0"
+            as: "values0"
+          - json: "$.values.1"
+            as: "values1"
+          - json: "$.from"
+            as: "from"
+          - json: "$.enabled"
+            as: "enabled"
+          - json: "$.color"
+            as: "color"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "any"
+          - hasProperty: "name"
+          - hasProperty: "nbUsers"
+          - hasProperty: "amount"
+          - hasProperty: "values"
+          - hasProperty: "enabled"
+          - hasProperty: "from"
+          - hasProperty: "color"
+          - equals:
+            - "{{ any }}"
+            - "Salut les amis"
+          - equals:
+            - "{{ name }}"
+            - "Test Data"
+          - equals:
+            - "{{ nbUsers }}"
+            - 10
+          - equals:
+            - "{{ amount }}"
+            - 45.4
+          - equals:
+            - "{{ values0 }}"
+            - "yes"
+          - equals:
+            - "{{ values1 }}"
+            - "no"
+          - equals:
+            - "{{ enabled }}"
+            - true
+          - equals:
+            - "{{ from }}"
+            - "06-04-2014"
+          - equals:
+            - "{{ color }}"
+            - "blue"
+    - function: "noPlansProperty"
+    - post:
+        name: "Add dynamic data to Test 2"
+        url: "/dynamicdata/test2?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          Plans: "Mon plan dans model Test 2"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "Plans"
+          - equals:
+            - "{{ response.Plans }}"
+            - "Mon plan dans model Test 2"
+    - function: "noNameProperty"

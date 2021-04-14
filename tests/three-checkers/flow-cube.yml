@@ -1,0 +1,566 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 300 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Three API"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - get:
+        name: "Get IFC Site"
+        url: "/three/site?name=cube&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "siteId"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.length }}"
+            - 1
+    - post:
+        name: "Create a Checker Flow (Cube)"
+        url: "/three/checker/flow/?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          name: "Flow to check Etoy IFC"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "flowId"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals"
+          moduleType: "filter"
+          inputVarName: "scene"
+          outputVarName: "Externals"
+          conditions:
+            - key: "userData.pset.LoadBearing"
+              operation: "="
+              value: "True"
+          conditionsOperator: "or"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals"
+          moduleType: "filter"
+          inputVarName: "scene"
+          outputVarName: "Internals"
+          conditions:
+            - key: "userData.pset.LoadBearing"
+              operation: "="
+              value: "False"
+          conditionsOperator: "or"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals Faces"
+          moduleType: "extract"
+          inputVarName: "Externals"
+          outputVarName: "ExternalsFaces"
+          extractType: "faces"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals Faces"
+          moduleType: "extract"
+          inputVarName: "Internals"
+          outputVarName: "InternalsFaces"
+          extractType: "faces"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals Edges"
+          moduleType: "extract"
+          inputVarName: "Externals"
+          outputVarName: "ExternalsEdges"
+          extractType: "edges"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals Edges"
+          moduleType: "extract"
+          inputVarName: "Internals"
+          outputVarName: "InternalsEdges"
+          extractType: "edges"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals Vertices"
+          moduleType: "extract"
+          inputVarName: "Externals"
+          outputVarName: "ExternalsVertices"
+          extractType: "vertices"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals Vertices"
+          moduleType: "extract"
+          inputVarName: "Internals"
+          outputVarName: "InternalsVertices"
+          extractType: "vertices"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals vs Internals distances, using Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals vs Internals distances, using Faces"
+          moduleType: "normal-distance"
+          inputVarName: "ExternalsFaces"
+          input2VarName: "InternalsFaces"
+          outputVarName: "ExtIntDistUsingFaces"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals distances, using Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals distances, using Faces"
+          moduleType: "normal-distance"
+          inputVarName: "ExternalsFaces"
+          input2VarName: "ExternalsFaces"
+          outputVarName: "ExtDistUsingFaces"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals distances, using Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals distances, using Faces"
+          moduleType: "normal-distance"
+          inputVarName: "InternalsFaces"
+          input2VarName: "InternalsFaces"
+          outputVarName: "IntDistUsingFaces"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Externals vs Internals distances, using Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Externals vs Internals distances"
+          moduleType: "reducer"
+          inputVarName: "ExtIntDistUsingFaces"
+          outputVarName: "MinExtIntDistUsingFaces"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Externals distances, using Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Externals distances"
+          moduleType: "reducer"
+          inputVarName: "ExtDistUsingFaces"
+          outputVarName: "MinExtDistUsingFaces"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Internals distances, using Faces"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Internals distances"
+          moduleType: "reducer"
+          inputVarName: "IntDistUsingFaces"
+          outputVarName: "MinIntDistUsingFaces"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals vs Internals distances, using Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals vs Internals distances, using Edges"
+          moduleType: "normal-distance"
+          inputVarName: "ExternalsEdges"
+          input2VarName: "InternalsEdges"
+          outputVarName: "ExtIntDistUsingEdges"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals distances, using Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals distances, using Edges"
+          moduleType: "normal-distance"
+          inputVarName: "ExternalsEdges"
+          input2VarName: "ExternalsEdges"
+          outputVarName: "ExtDistUsingEdges"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals distances, using Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals distances, using Edges"
+          moduleType: "normal-distance"
+          inputVarName: "InternalsEdges"
+          input2VarName: "InternalsEdges"
+          outputVarName: "IntDistUsingEdges"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Externals vs Internals distances, using Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Externals vs Internals distances"
+          moduleType: "reducer"
+          inputVarName: "ExtIntDistUsingEdges"
+          outputVarName: "MinExtIntDistUsingEdges"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Externals distances, using Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Externals distances"
+          moduleType: "reducer"
+          inputVarName: "ExtDistUsingEdges"
+          outputVarName: "MinExtDistUsingEdges"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Internals distances, using Edges"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Internals distances"
+          moduleType: "reducer"
+          inputVarName: "IntDistUsingEdges"
+          outputVarName: "MinIntDistUsingEdges"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals vs Internals distances, using Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals vs Internals distances, using Vertices"
+          moduleType: "normal-distance"
+          inputVarName: "ExternalsVertices"
+          input2VarName: "InternalsVertices"
+          outputVarName: "ExtIntDistUsingVertices"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Externals distances, using Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Externals distances, using Vertices"
+          moduleType: "normal-distance"
+          inputVarName: "ExternalsVertices"
+          input2VarName: "ExternalsVertices"
+          outputVarName: "ExtDistUsingVertices"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Internals distances, using Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Internals distances, using Vertices"
+          moduleType: "normal-distance"
+          inputVarName: "InternalsVertices"
+          input2VarName: "InternalsVertices"
+          outputVarName: "IntDistUsingVertices"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Externals vs Internals distances, using Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Externals vs Internals distances"
+          moduleType: "reducer"
+          inputVarName: "ExtIntDistUsingVertices"
+          outputVarName: "MinExtIntDistUsingVertices"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Externals distances, using Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Externals distances"
+          moduleType: "reducer"
+          inputVarName: "ExtDistUsingVertices"
+          outputVarName: "MinExtDistUsingVertices"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Minimum Internals distances, using Vertices"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Minimum Internals distances"
+          moduleType: "reducer"
+          inputVarName: "IntDistUsingVertices"
+          outputVarName: "MinIntDistUsingVertices"
+          operation: "min"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Count nb of external objects"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "Count nb of external objects"
+          moduleType: "reducer"
+          inputVarName: "Externals"
+          outputVarName: "ExternalsCount"
+          operation: "count"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+    # - post:
+    #     name: "Run the checker flow"
+    #     url: "/three/checker/flow/{{ flowId }}/run?apiKey={{ apiKey }}"
+    #     headers:
+    #       "Authorization": "Bearer {{ token }}"
+    #     capture:
+    #       - json: "$"
+    #         as: "response"
+    #       - json: "$.id"
+    #         as: "moduleId"
+    #     expect:
+    #     - statusCode: 200
+    #     - equals:
+    #       - "{{ response.summaries.length }}"
+    #       - 27
+    #     - equals:
+    #       - "{{ response.summaries[26] }}"
+    #       - "1.175"
+    - function: "logResponse"

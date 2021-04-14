@@ -1,0 +1,95 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {outputFormat: 'json'}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - duration: 2
+          arrivalCount: 10
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  payload:
+    -
+      path: "../_data/account-a1.csv"
+      fields:
+        - "firstname"
+        - "lastname"
+        - "email"
+        - "mobile"
+        - "password"
+        - "emailCode"
+        - "mobileCode"
+      cast: false
+      skipHeader: true
+      order: sequence
+    -
+      path: "../_data/app-a.csv"
+      fields:
+        - "appId"
+        - "apiKey"
+      cast: false
+      skipHeader: true
+      order: sequence
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Create Main Account"
+    flow:
+    - post:
+        name: "Create Main Account"
+        url: "/user/create-account?apiKey={{ apiKey }}"
+        json:
+          firstname: "{{ firstname }}"
+          lastname: "{{ lastname }}"
+          email: "{{ email }}"
+          mobile: "{{ mobile }}"
+          password: "{{ password }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.token"
+            as: "token"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - post:
+        name: "Validate Account"
+        url: "/user/create-account?apiKey={{ apiKey }}"
+        json:
+          token: "{{ token }}"
+          emailCode: "{{ emailCode }}"
+          mobileCode: "{{ mobileCode }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "userId"
+        expect:
+          - statusCode: 200
+          - hasProperty: "id"
+    - post:
+        name: "Login with main account"
+        url: "/auth/token?apiKey={{ apiKey }}"
+        json:
+          username: "{{ email }}"
+          password: "{{ password }}"
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "token"
+    - function: "saveTokenA1"
+

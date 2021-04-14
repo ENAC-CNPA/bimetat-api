@@ -1,0 +1,243 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - duration: 2
+          arrivalCount: 10
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  payload:
+    -
+      path: "../_data/token-a1.csv"
+      fields:
+        - "token"
+      cast: false
+      skipHeader: false
+      order: sequence
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Policies"
+    flow:
+    - function: "getAppA"
+    - get: 
+        name: "Policy Authenticated Test (should fail)"
+        url: "/test/policies/authenticated?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+        expect:
+          - statusCode: 500
+    - get: 
+        name: "Policy Authenticated Test"
+        url: "/test/policies/authenticated?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        expect:
+          - statusCode: 200
+    - get: 
+        name: "Policy Roles Test (should fail)"
+        url: "/test/policies/roles?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+        expect:
+          - statusCode: 500
+    - function: "getTokenA1"
+    - function: "getAppBAppId"
+    - function: "getAppAApiKey"
+    - get:
+        name: "Get Users using main user"
+        url: "/app/{{ appId }}/user?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "userId"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.length }}"
+            - 3
+    - put:
+        name: "Set Shop Role to secondary user"
+        url: "/app/{{ appId }}/user/{{ userId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        json:
+          roles:
+            - "test"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.roles.length }}"
+            - 1
+          - equals:
+            - "{{ response.roles[0] }}"
+            - "test"
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - get: 
+        name: "Policy Roles Test"
+        url: "/test/policies/roles?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        expect:
+          - statusCode: 200
+    # - get: 
+    #     name: "Project Member Test (should fail)"
+    #     url: "/test/policies/project-member/56cf02e2901495657b2353e1?apiKey={{ apiKey }}"
+    #     headers:
+    #       content-type: "application/json"
+    #     expect:
+    #       - statusCode: 500
+    # - get: 
+    #     name: "Project Member Test"
+    #     url: "/test/policies/project-member/56cf02e2901495657b2353e1?apiKey={{ apiKey }}"
+    #     headers:
+    #       authorization: "Bearer {{ token }}"
+    #       content-type: "application/json"
+    #     expect:
+    #       - statusCode: 200
+    # - get: 
+    #     name: "Project Member Test (should fail)"
+    #     url: "/test/policies/project-member/5731efa3b75526117cc726b5?apiKey={{ apiKey }}"
+    #     headers:
+    #       authorization: "Bearer {{ token }}"
+    #       content-type: "application/json"
+    #     expect:
+    #       - statusCode: 500
+    - get: 
+        name: "API Key"
+        url: "/test/policies/api-key?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        expect:
+          - statusCode: 200
+    - get: 
+        name: "API Key (should fail)"
+        url: "/test/policies/api-key?apiKey=abadfasfasdfasdfasdfas"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        expect:
+          - statusCode: 500
+    - get: 
+        name: "Get All Data"
+        url: "/test/policies/all?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.length }}"
+            - 0
+    - post:
+        name: "Create data"
+        url: "/test/policies/create?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        json:
+          title: "Test Data Element"
+        capture:
+          - json: "$.id"
+            as: "authoredElementId"
+        expect:
+          - statusCode: 200
+    - post:
+        name: "Create non-authored data"
+        url: "/test/policies/create?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Test Non Authored Data Element"
+        capture:
+          - json: "$.id"
+            as: "nonAuthoredElementId"
+        expect:
+          - statusCode: 200
+    - get: 
+        name: "Get All Owner"
+        url: "/test/policies/owner?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.length }}"
+            - 1
+          - equals:
+            - "{{ response[0].title }}"
+            - "Test Data Element"
+    - get: 
+        name: "Get One Owner"
+        url: "/test/policies/owner/{{ authoredElementId }}?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.title }}"
+            - "Test Data Element"
+    - get: 
+        name: "Get One Owner (should fail)"
+        url: "/test/policies/owner/{{ authoredElementId }}?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - get: 
+        name: "Get One Owner (should fail)"
+        url: "/test/policies/owner/{{ nonAuthoredElementId }}?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - get: 
+        name: "Get One Owner (should fail)"
+        url: "/test/policies/owner/{{ nonAuthoredElementId }}?apiKey={{ apiKey }}"
+        headers:
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500

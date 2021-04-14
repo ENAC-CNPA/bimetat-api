@@ -1,0 +1,772 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 300 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Three API"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - get:
+        name: "Get IFC Site"
+        url: "/three/site?name=etoy&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "siteId"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.length }}"
+            - 1
+    - post:
+        name: "Create a Checker Flow (Etoy)"
+        url: "/three/checker/flow/?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          name: "Flow to check Etoy IFC"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "flowId"
+        expect:
+        - statusCode: 200
+    - post:
+        name: "Add a filter module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First filter module"
+          moduleType: "filter"
+          inputVarName: "scene"
+          outputVarName: "chairs"
+          conditions:
+            - key: "userData.name"
+              operation: "*"
+              value: "Stool"
+          conditionsOperator: "or"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleFilterId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the filter module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleFilterId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleFilterId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "filter"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "scene"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "chairs"
+          - equals:
+            - "{{ response.conditionsOperator }}"
+            - "or"
+          - equals:
+            - "{{ response.conditions.length}}"
+            - 1
+          - equals:
+            - "{{ response.conditions[0].key }}"
+            - "userData.name"
+          - equals:
+            - "{{ response.conditions[0].operation }}"
+            - "*"
+          - equals:
+            - "{{ response.conditions[0].value }}"
+            - "Stool"
+    - put:
+        name: "Edit the filter module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleFilterId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          conditionsOperator: "and"
+          conditions:
+            - key: "userData.name"
+              operation: "*"
+              value: "Niche"
+          outputVarName: "Niches"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleFilterId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleFilterId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "filter"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "scene"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "Niches"
+          - equals:
+            - "{{ response.conditionsOperator }}"
+            - "and"
+          - equals:
+            - "{{ response.conditions.length}}"
+            - 1
+          - equals:
+            - "{{ response.conditions[0].key }}"
+            - "userData.name"
+          - equals:
+            - "{{ response.conditions[0].operation }}"
+            - "*"
+          - equals:
+            - "{{ response.conditions[0].value }}"
+            - "Niche"
+    - post:
+        name: "Add an extract module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First extract module"
+          moduleType: "extract"
+          inputVarName: "Niches"
+          outputVarName: "names"
+          extractType: "property"
+          value: "userData.name"
+          forceOutputAsNumber: false
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleExtractId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the extract module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleExtractId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleExtractId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "extract"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "Niches"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "names"
+          - equals:
+            - "{{ response.extractType }}"
+            - "property"
+          - equals:
+            - "{{ response.value}}"
+            - "userData.name"
+          - equals:
+            - "{{ response.forceOutputAsNumber }}"
+            - false
+    - put:
+        name: "Edit the extract module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleExtractId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          value: "userData.pset.Reference"
+          outputVarName: "NichesReferences"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleExtractId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleExtractId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "extract"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "Niches"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.extractType }}"
+            - "property"
+          - equals:
+            - "{{ response.value}}"
+            - "userData.pset.Reference"
+          - equals:
+            - "{{ response.forceOutputAsNumber }}"
+            - false
+    - post:
+        name: "Add a math module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First filter module"
+          moduleType: "math"
+          inputVarName: "NichesReferences"
+          outputVarName: "NichesReferencesX3"
+          expression: "NichesReferences * 3"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleMathId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the math module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleMathId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleMathId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "math"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesX3"
+          - equals:
+            - "{{ response.expression }}"
+            - "NichesReferences * 3"
+    - put:
+        name: "Edit the math module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleMathId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          expression: "NichesReferences * 2"
+          outputVarName: "NichesReferencesX2"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleMathId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleMathId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "math"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesX2"
+          - equals:
+            - "{{ response.expression }}"
+            - "NichesReferences * 2"
+    - post:
+        name: "Add a if module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First if module"
+          moduleType: "if"
+          inputVarName: "NichesReferencesX2"
+          outputVarName: "NichesReferencesX2If"
+          defaultOutputValue: 10
+          operations:
+            - conditions:
+              - operation: ">"
+                value: 5
+              conditionsOperator: "or"
+              outputValue: 20
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleIfId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the if module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleIfId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleIfId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "if"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferencesX2"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesX2If"
+          - equals:
+            - "{{ response.defaultOutputValue }}"
+            - 10
+          - equals:
+            - "{{ response.operations.length }}"
+            - 1
+          - equals:
+            - "{{ response.operations[0].conditions[0].operation }}"
+            - ">"
+          - equals:
+            - "{{ response.operations[0].conditions[0].value }}"
+            - 5
+          - equals:
+            - "{{ response.operations[0].conditionsOperator }}"
+            - "or"
+          - equals:
+            - "{{ response.operations[0].outputValue }}"
+            - 20
+    - put:
+        name: "Edit the if module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleIfId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          defaultOutputValue: 15
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleIfId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleIfId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "if"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferencesX2"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesX2If"
+          - equals:
+            - "{{ response.defaultOutputValue }}"
+            - 15
+          - equals:
+            - "{{ response.operations.length }}"
+            - 1
+          - equals:
+            - "{{ response.operations[0].conditions[0].operation }}"
+            - ">"
+          - equals:
+            - "{{ response.operations[0].conditions[0].value }}"
+            - 5
+          - equals:
+            - "{{ response.operations[0].conditionsOperator }}"
+            - "or"
+          - equals:
+            - "{{ response.operations[0].outputValue }}"
+            - 20
+    - post:
+        name: "Add a reducer module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First reducer module"
+          moduleType: "reducer"
+          inputVarName: "NichesReferencesX2If"
+          outputVarName: "NichesReferencesX2IfReducer"
+          operation: "max"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleReducerId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the reducer module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleReducerId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleReducerId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "reducer"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferencesX2If"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesX2IfReducer"
+          - equals:
+            - "{{ response.operation }}"
+            - "max"
+    - put:
+        name: "Edit the reducer module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleReducerId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          operation: "sum"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleReducerId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleReducerId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "reducer"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferencesX2If"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesX2IfReducer"
+          - equals:
+            - "{{ response.operation }}"
+            - "sum"
+    - post:
+        name: "Add a projection module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First projection module"
+          moduleType: "projection"
+          inputVarName: "NichesReferences"
+          outputVarName: "NichesReferencesProjection"
+          projectionAxis: "x"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleProjectionId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the projection module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleProjectionId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleProjectionId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "projection"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesProjection"
+          - equals:
+            - "{{ response.projectionAxis }}"
+            - "x"
+    - put:
+        name: "Edit the projection module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleProjectionId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          projectionAxis: "y"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleProjectionId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleProjectionId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "projection"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesProjection"
+          - equals:
+            - "{{ response.projectionAxis }}"
+            - "y"
+    - post:
+        name: "Add a distance module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First distance module"
+          moduleType: "distance"
+          inputVarName: "NichesReferences"
+          outputVarName: "NichesReferencesDistance"
+          distanceType: "2d-2d"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleDistanceId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the distance module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleDistanceId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleDistanceId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "distance"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesDistance"
+          - equals:
+            - "{{ response.distanceType }}"
+            - "2d-2d"
+    - put:
+        name: "Edit the distance module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleDistanceId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          distanceType: "3d-3d"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleDistanceId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleDistanceId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "distance"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesDistance"
+          - equals:
+            - "{{ response.distanceType }}"
+            - "3d-3d"
+    - post:
+        name: "Add a normal distance module"
+        url: "/three/checker/flow/{{ flowId }}/module?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          flowId: "{{ flowId }}"
+          name: "First normal distance module"
+          moduleType: "normal-distance"
+          inputVarName: "NichesReferences"
+          outputVarName: "NichesReferencesNormalDistance"
+          distanceType: "2d-2d"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleNormalDistanceId"
+        expect:
+        - statusCode: 200
+    - get:
+        name: "Get the normal distance module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleNormalDistanceId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleNormalDistanceId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "normal-distance"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesNormalDistance"
+          - equals:
+            - "{{ response.distanceType }}"
+            - "2d-2d"
+    - put:
+        name: "Edit the normal distance module"
+        url: "/three/checker/flow/{{ flowId }}/module/{{ moduleNormalDistanceId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          distanceType: "3d-3d"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleNormalDistanceId"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.id }}"
+            - "{{ moduleNormalDistanceId }}"
+          - equals:
+            - "{{ response.moduleType }}"
+            - "normal-distance"
+          - equals:
+            - "{{ response.inputVarName }}"
+            - "NichesReferences"
+          - equals:
+            - "{{ response.outputVarName }}"
+            - "NichesReferencesNormalDistance"
+          - equals:
+            - "{{ response.distanceType }}"
+            - "3d-3d"
+    - post:
+        name: "Run the checker flow"
+        url: "/three/checker/flow/{{ flowId }}/run?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.id"
+            as: "moduleId"
+        expect:
+        - statusCode: 200
+        - equals:
+          - "{{ response.operation }}"
+          - "completed"
+        - equals:
+          - "{{ response.outputs.length }}"
+          - 8
+        - equals:
+          - "{{ response.outputs[0] }}"
+          - "32 elements"
+        - equals:
+          - "{{ response.outputs[1] }}"
+          - "3, 3, 3"
+        - equals:
+          - "{{ response.outputs[2] }}"
+          - "6, 6, 6"
+        - equals:
+          - "{{ response.outputs[3] }}"
+          - "20, 20, 20"
+        - equals:
+          - "{{ response.outputs[4] }}"
+          - "640"
+        - equals:
+          - "{{ response.outputs[5] }}"
+          - ""
+        - equals:
+          - "{{ response.outputs[6] }}"
+          - ""
+        - equals:
+          - "{{ response.outputs[7] }}"
+          - ""

@@ -1,0 +1,409 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  payload:
+    -
+      path: "../_data/account-b1.csv"
+      fields:
+        - "firstname"
+        - "lastname"
+        - "email"
+        - "mobile"
+        - "password"
+        - "emailCode"
+        - "mobileCode"
+      cast: false
+      skipHeader: true
+      order: sequence
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test BCF Rest API"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - function: "getAppBApiKey"
+    - post:
+        name: "Login"
+        url: "/bcf/2.1/auth/swissdata-auth-token?apiKey={{ apiKey }}"
+        json:
+          username: "{{ email }}"
+          password: "{{ password }}"
+        capture:
+          - json: "$.token"
+            as: "token"
+          - json: "$"
+            as: "response"
+        expect:
+          statusCode: 200
+    - get:
+        name: "Check if project exists"
+        url: "/bcf/2.1/projects?name=test&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "projectId"
+        expect:
+          statusCode: 200
+    - post:
+        ifTrue: "projectId == undefined"
+        name: "Create Project"
+        url: "/bcf/2.1/projects?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          name: "Test"
+        capture:
+          - json: "$.project_id"
+            as: "projectId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "project_id"
+    - get:
+        name: "Get Projects"
+        url: "/bcf/2.1/projects?name=test&apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - equals:
+            - "{{ response.length }}"
+            - 1
+    - get:
+        name: "Get Project"
+        url: "/bcf/2.1/projects/{{ projectId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "project_id"
+          - equals:
+            - "{{ response.project_id }}"
+            - "{{ projectId }}"
+    - get:
+        name: "Get Project including authorization"
+        url: "/bcf/2.1/projects/{{ projectId }}?includeAuthorization=true&apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "project_id"
+          - equals:
+            - "{{ response.project_id }}"
+            - "{{ projectId }}"
+          - hasProperty: "authorization"
+          - equals:
+            - "{{ response.authorization.project_actions.length }}"
+            - 4
+    - get:
+        name: "Get Project Extensions"
+        url: "/bcf/2.1/projects/{{ projectId }}/extensions?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "topic_type"
+          - hasProperty: "topic_status"
+          - hasProperty: "topic_label"
+          - hasProperty: "snippet_type"
+          - hasProperty: "priority"
+          - hasProperty: "user_id_type"
+          - hasProperty: "stage"
+          - hasProperty: "project_actions"
+          - hasProperty: "topic_actions"
+          - hasProperty: "comment_actions"
+    - put:
+        name: "Add User Ids to project"
+        url: "/bcf/2.1/projects/{{ projectId }}?includeAuthorization=true&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          user_id_type:
+            - "ben@platform5.ch"
+            - "thomas@platform5.ch"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+    - get:
+        name: "Get Project Extensions after Put"
+        url: "/bcf/2.1/projects/{{ projectId }}/extensions?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "user_id_type"
+          - equals:
+            - "{{ response.user_id_type.length }}"
+            - 2
+          - equals:
+            - "{{ response.user_id_type.0 }}"
+            - "ben@platform5.ch"
+          - equals:
+            - "{{ response.user_id_type.1 }}"
+            - "thomas@platform5.ch"
+    - post:
+        name: "Create Topic"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          title: "Topic 1"
+          topic_type: "Issue"
+          topic_status: "Open"
+        capture:
+          - json: "$.guid"
+            as: "topicId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - hasProperty: "creation_author"
+          - hasProperty: "topic_type"
+          - hasProperty: "topic_status"
+    - get:
+        name: "Get Topics"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - equals:
+            - "{{ response.length }}"
+            - 1
+    - get:
+        name: "Get Project"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - equals:
+            - "{{ response.guid }}"
+            - "{{ topicId }}"
+    - post:
+        name: "Create Viewpoint"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/viewpoints?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          components:
+            selection:
+              - ifc_guid: "ifc123"
+              - ifc_guid: "icf456"
+          snapshot:
+            snapshot_type: "png"
+            snapshot_data: "data:image/png;base64,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"
+        capture:
+          - json: "$.guid"
+            as: "viewpointId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - hasProperty: "creation_author"
+    - post:
+        name: "Create Another Viewpoint"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/viewpoints?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          components:
+            selection:
+              - ifc_guid: "ifc789"
+              - ifc_guid: "icf101112"
+            visibility:
+              view_setup_hints:
+                spaces_visible: true
+          snapshot:
+            snapshot_type: "png"
+            snapshot_data: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAIAAAC0Ujn1AAAFoWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS41LjAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIKICAgIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIKICAgIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIgogICAgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIKICAgdGlmZjpJbWFnZUxlbmd0aD0iMzAiCiAgIHRpZmY6SW1hZ2VXaWR0aD0iMzAiCiAgIHRpZmY6UmVzb2x1dGlvblVuaXQ9IjIiCiAgIHRpZmY6WFJlc29sdXRpb249Ijk2LjAiCiAgIHRpZmY6WVJlc29sdXRpb249Ijk2LjAiCiAgIGV4aWY6UGl4ZWxYRGltZW5zaW9uPSIzMCIKICAgZXhpZjpQaXhlbFlEaW1lbnNpb249IjMwIgogICBleGlmOkNvbG9yU3BhY2U9IjEiCiAgIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiCiAgIHBob3Rvc2hvcDpJQ0NQcm9maWxlPSJzUkdCIElFQzYxOTY2LTIuMSIKICAgeG1wOk1vZGlmeURhdGU9IjIwMjAtMDEt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"
+        capture:
+          - json: "$.guid"
+            as: "viewpoint2Id"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - hasProperty: "creation_author"
+    - get:
+        name: "Get Viewpoints"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/viewpoints?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - equals:
+            - "{{ response.length }}"
+            - 2
+    - get:
+        name: "Get Viewpoint"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/viewpoints/{{ viewpointId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - equals:
+            - "{{ response.guid }}"
+            - "{{ viewpointId }}"
+    - post:
+        name: "Create Comment"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/comments?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          comment: "My comment"
+          viewpoint_guid: "{{ viewpointId }}"
+        capture:
+          - json: "$.guid"
+            as: "commentId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - hasProperty: "creation_author"
+          - hasProperty: "comment"
+          - hasProperty: "topic_guid"
+          - hasProperty: "viewpoint_guid"
+    - post:
+        name: "Create Second Comment"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/comments?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          comment: "Another Comment with two viewpoints"
+          viewpoint_guid: "{{ viewpoint2Id }}"
+        capture:
+          - json: "$.guid"
+            as: "comment2Id"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - hasProperty: "creation_author"
+          - hasProperty: "comment"
+          - hasProperty: "topic_guid"
+          - hasProperty: "viewpoint_guid"
+    - get:
+        name: "Get Comments"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/comments?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - equals:
+            - "{{ response.length }}"
+            - 2
+    - get:
+        name: "Get Comment"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/comments/{{ commentId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "guid"
+          - equals:
+            - "{{ response.guid }}"
+            - "{{ commentId }}"
+    - get:
+        name: "Export File"
+        url: "/bcf/2.1/projects/{{ projectId }}/export-file?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        expect:
+          - statusCode: 200
+    - delete:
+        name: "Delete Comment"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/comments/{{ commentId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        expect:
+          - statusCode: 204
+    - delete:
+        name: "Delete Viewpoint"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}/viewpoints/{{ viewpointId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        expect:
+          - statusCode: 204
+    - delete:
+        name: "Delete Topic"
+        url: "/bcf/2.1/projects/{{ projectId }}/topics/{{ topicId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        expect:
+          - statusCode: 204
+    - delete:
+        name: "Delete Project"
+        url: "/bcf/2.1/projects/{{ projectId }}?apiKey={{ apiKey }}"
+        headers: 
+          "Authorization": "Bearer {{ token }}"
+        expect:
+          - statusCode: 204
+

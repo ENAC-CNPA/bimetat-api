@@ -1,0 +1,289 @@
+# TODO:
+# - find a way to assert orderNb with increment
+# - restore min/max test for value and measure when applicable
+# - add query to test filter / search / sort
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    localload:
+      phases:
+        - pause: 5
+        - duration: 60
+          arrivalRate: 10
+          rampTo: 50
+          name: "Warm up phase"
+        - duration: 600
+          arrivalRate: 50
+          name: "Sustained max load"
+    production:
+      target: 'https://api.bimet.at/prod'
+      phases:
+        - duration: 120
+          arrivalRate: 10
+    stage:
+      target: 'https://api.bimet.at/stage'
+      phases:
+        - duration: 120
+          arrivalRate: 10
+          rampTo: 50
+          name: "Warm up the application"
+        - duration: 600
+          arrivalRate: 50
+          name: "Sustained max load"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Decorators"
+    flow:
+    - function: "getAppA"
+    - function: "getTokenA1"
+    - get:
+        name: "Current User"
+        url: "/user/current?apiKey={{ apiKey }}"
+        headers:
+          authorization: "Bearer {{ token }}"
+          content-type: "application/json"
+        capture:
+          - json: "$.id"
+            as: "userId"
+        expect:
+          - statusCode: 200
+          - hasProperty: "id"
+    - get: 
+        name: "Decorator data (should be empty)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.length }}"
+            - 0
+    - post: 
+        name: "Create Decorator data (should faild due to required title)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+          - equals:
+            - "{{ response.error }}"
+            - "Title is required"
+    - post: 
+        name: "Create Decorator data"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data title"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.orderNb"
+            as: "firstOrderNb"
+        expect:
+          - statusCode: 200
+          - hasProperty: "id"
+          - equals:
+            - "{{ response.title }}"
+            - "Data title"
+    - post: 
+        name: "Create Decorator data with all possible fields (do not include file testing)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data second title"
+          value: 10
+          measure: 5.5
+          type: "account"
+          colors: ["blue", "red"]
+          tags: ["material", "textile"] 
+          date: "07.02.1983"
+          active: true
+          user: "{{ userId }}"
+          data: {name: "ben", value: 12}
+          data2: {name: "thomas", otherKey: "test"}
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - hasProperty: "value"
+          - hasProperty: "measure"
+          - hasProperty: "type"
+          - hasProperty: "colors"
+          - hasProperty: "tags"
+          - hasProperty: "date"
+          - hasProperty: "active"
+          - hasProperty: "user"
+          - hasProperty: "data"
+          - hasProperty: "data2"
+          - hasProperty: "orderNb"
+          - equals:
+            - "{{ response.title }}"
+            - "Data second title"
+          - equals:
+            - "{{ response.value }}"
+            - 10
+          - equals:
+            - "{{ response.measure }}"
+            - 5.5
+          - equals:
+            - "{{ response.type }}"
+            - "account"
+          - equals:
+            - "{{ response.colors }}"
+            - ["blue", "red"]
+          - equals:
+            - "{{ response.tags }}"
+            - ["material", "textile"] 
+          - equals:
+            - "{{ response.date }}"
+            - "07.02.1983"
+          - equals:
+            - "{{ response.active }}"
+            - true
+          - equals:
+            - "{{ response.user }}"
+            - "{{ userId }}"
+          - equals:
+            - "{{ response.data.name }}"
+            - "ben"
+          - equals:
+            - "{{ response.data.value }}"
+            - 12
+          - equals:
+            - "{{ response.data2.name }}"
+            - "thomas"
+          - equals:
+            - "{{ response.data2.otherKey }}"
+            - "test"
+          # - equals:
+          #   - "{{ response.orderNb }}"
+          #   - "{{ firstOrderNb + 1}}"
+    # - post: 
+    #     name: "Create Decorator data  (should fails, due to invalid value)"
+    #     url: "/test/decorators"
+    #     headers:
+    #       content-type: "application/json"
+    #     json:
+    #       title: "Data fail title"
+    #       value: 12
+    #     capture:
+    #       - json: "$"
+    #         as: "response"
+    #     expect:
+    #       - statusCode: 500
+    # - post: 
+    #     name: "Create Decorator data  (should fails, due to invalid measure)"
+    #     url: "/test/decorators"
+    #     headers:
+    #       content-type: "application/json"
+    #     json:
+    #       title: "Data fail title"
+    #       measure: 12
+    #     capture:
+    #       - json: "$"
+    #         as: "response"
+    #     expect:
+    #       - statusCode: 500
+    - post: 
+        name: "Create Decorator data  (should fails, due to invalid type)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data fail title"
+          type: "asfsa"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - post: 
+        name: "Create Decorator data with inline array string (colors)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data not fail title"
+          colors: "blue"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.colors }}"
+            - ["blue"]
+    - post: 
+        name: "Create Decorator data  (should fails, due to invalid colors)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data fail title"
+          colors: ["black"]
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - post: 
+        name: "Create Decorator data with inline tags"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data not fail title"
+          tags: "asdf"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - equals:
+            - "{{ response.tags }}"
+            - ["asdf"]
+    - post: 
+        name: "Create Decorator data (should fails, due to invalid tags)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data fail title"
+          tags: 12
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500
+    - post: 
+        name: "Create Decorator data (should fails, due to invalid user)"
+        url: "/test/decorators"
+        headers:
+          content-type: "application/json"
+        json:
+          title: "Data fail title"
+          user: "asfasfasfasfdasf"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 500

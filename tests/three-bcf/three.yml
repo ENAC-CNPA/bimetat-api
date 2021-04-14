@@ -1,0 +1,317 @@
+config:
+  target: 'http://localhost:3001'
+  http:
+    timeout: 10 # max 10 seconds before considering a request as timed out
+  plugins:
+    expect: {}
+  phases:
+    - duration: 1
+      arrivalCount: 1
+  environments:
+    production:
+      target: 'https://api.bimet.at/prod'
+    stage:
+      target: 'https://api.bimet.at/stage'
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  processor: "../processor.js"
+scenarios:
+  - name: "Test Three API"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - get:
+        name: "Check if site exists"
+        url: "/three/site?name=test&apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        capture:
+          - json: "$"
+            as: "response"
+          - json: "$.0.id"
+            as: "siteId"
+        expect:
+          statusCode: 200
+          equals:
+            - "{{ response.length }}"
+            - 0
+    - post:
+        ifTrue: "siteId == undefined"
+        name: "Create Site"
+        url: "/three/site?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          name: "Test"
+        capture:
+          - json: "$.id"
+            as: "siteId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+    - post:
+        name: "Add JSON Data"
+        url: "/three/site/{{ siteId }}/import/json?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          json:
+            metadata:
+              version: "4.5"
+              type: "Object"
+              generator: "Swissdata testing tool"
+            geometries:
+              - uuid: "38 CB0E84 - FC02 - 46 D4 - BBA6 - 3 A6E54291710 "
+                type: "BoxGeometry"
+                width: 30
+                height: 1
+                depth: 30
+            materials:
+              - uuid: "2 EF24403 - A15E - 42 D4 - 8 BF9 - E271911864EC "
+                type: "MeshPhongMaterial"
+                color: 32768
+                emissive: 0
+                specular: 1118481
+                shininess: 30
+                side: 2
+                depthFunc: 3
+                depthWrite: true
+                stencilWrite: false
+                stencilFunc: 519
+                stencilRef: 0
+                stencilMask: 255
+                stencilFail: 7680
+                stencilZFail: 7680
+                stencilZPass: 7680
+            object:
+              uuid: "5 B70A9E9 - E524 - 419 E - A1BB - 171E183 D4C0C "
+              type: Scene
+              layers: 1
+              matrix: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]
+              children:
+                - uuid: "0559 AD2A - 65 DC - 400E-9 E58 - C40BF4677CFF "
+                  type: Mesh
+                  layers: 1
+                  matrix: [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]
+                  geometry: "38 CB0E84 - FC02 - 46 D4 - BBA6 - 3 A6E54291710 "
+                  material: "2 EF24403 - A15E - 42 D4 - 8 BF9 - E271911864EC "            
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+        - statusCode: 200
+        - contentType: json
+        - hasProperty: "reducingMaterialStats"
+        - hasProperty: "unsavedMaterialProperties"
+        - hasProperty: "unsavedGeometryProperties"
+        - hasProperty: "unsavedObjectProperties"
+        - hasProperty: "removedObjects"
+        - equals:
+          - "{{ response.reducingMaterialStats.nbMaterialsOrigin}}"
+          - 1
+        - equals:
+          - "{{ response.reducingMaterialStats.nbMaterialsFinal}}"
+          - 1
+        - equals:
+          - "{{ response.unsavedMaterialProperties.length}}"
+          - 0
+        - equals:
+          - "{{ response.unsavedGeometryProperties.length}}"
+          - 0
+        - equals:
+          - "{{ response.unsavedObjectProperties.length}}"
+          - 0
+        - equals:
+          - "{{ response.removedObjects.length}}"
+          - 6
+  - name: "Link THREE and BCF APIs"
+    flow:
+    - function: "getAppB"
+    - function: "getTokenB1"
+    - post:
+        name: "Create Site for BCF"
+        url: "/three/site?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          name: "Site for BCF"
+        capture:
+          - json: "$.id"
+            as: "siteId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"  
+    - post:
+        name: "Create BCF Project"
+        url: "/bcf/2.1/projects?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          name: "BCF Test Project"
+        capture:
+          - json: "$.project_id"
+            as: "projectId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "project_id"  
+    - put:
+        name: "Link Site and BCF"
+        url: "/three/site/{{ siteId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          bcfProjectId: "{{ projectId }}"
+        capture:
+          - json: "$.bcfProjectId"
+            as: "bcfProjectId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"  
+          - hasProperty: "bcfProjectId"
+          - equals:
+            - "{{ bcfProjectId }}"
+            - "{{ projectId }}"
+    - post:
+        name: "Create Theme"
+        url: "/three/theme?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          name: "Test Theme"
+        capture:
+          - json: "$.id"
+            as: "themeId"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+    - post:
+        name: "Create Style"
+        url: "/three/style?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          siteId: "{{ siteId }}"
+          name: "Test Style"
+          display: true
+          color: "#f00"
+          material: "basic"
+          opacity: 0.5
+          renderOrder: 1
+          displayLabel: true
+          labelKey: "name"
+          labelBackgroundColor: "#f00"
+          labelTextColor: "#fff"
+          labelScale: 2
+          labelPosition: 
+            x: 1
+            y: 2
+            z: 3
+          iconCentroidMethod: "auto"
+        capture:
+          - json: "$.id"
+            as: "styleId"
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+          - equals:
+            - "{{ response.name }}"
+            - "Test Style"
+          - equals:
+            - "{{ response.display }}"
+            - true
+          - equals:
+            - "{{ response.color }}"
+            - "#f00"
+          - equals:
+            - "{{ response.material }}"
+            - "basic"
+          - equals:
+            - "{{ response.opacity }}"
+            - 0.5
+          - equals:
+            - "{{ response.renderOrder }}"
+            - 1
+          - equals:
+            - "{{ response.displayLabel }}"
+            - true
+          - equals:
+            - "{{ response.labelKey }}"
+            - "name"
+          - equals:
+            - "{{ response.labelBackgroundColor }}"
+            - "#f00"
+          - equals:
+            - "{{ response.labelTextColor }}"
+            - "#fff"
+          - equals:
+            - "{{ response.labelScale }}"
+            - 2
+          - equals:
+            - "{{ response.labelPosition.x }}"
+            - 1
+          - equals:
+            - "{{ response.labelPosition.y }}"
+            - 2
+          - equals:
+            - "{{ response.labelPosition.z }}"
+            - 3
+    - put:
+        name: "Add Style to Theme"
+        url: "/three/theme/{{ themeId }}?apiKey={{ apiKey }}"
+        headers:
+          "Authorization": "Bearer {{ token }}"
+        json:
+          rules:
+            - name: "Test rule"
+              active: true
+              context: []
+              conditions:
+                - key: "type"
+                  type: "="
+                  value: "Mesh"
+              priority: 0
+              exclusive: false
+              last: false
+              applyToChildren: true
+              styles:
+                - "{{ styleId }}"
+        capture:
+          - json: "$"
+            as: "response"
+        expect:
+          - statusCode: 200
+          - contentType: json
+          - hasProperty: "name"
+          - hasProperty: "id"
+          - equals:
+            - "{{ response.name }}"
+            - "Test Theme"
+          - equals:
+            - "{{ response.rules.0.name }}"
+            - "Test rule"
+          - equals:
+            - "{{ response.rules.0.active }}"
+            - true
+          - equals:
+            - "{{ response.rules.0.conditions.0.value }}"
+            - "Mesh"
+          - equals:
+            - "{{ response.rules.0.styles.0 }}"
+            - "{{ styleId }}"
+          
