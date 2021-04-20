@@ -1,4 +1,4 @@
-FROM node:10.15.3
+FROM node:15.12.0
 
 RUN apt update \
 	&& apt install vim git bash make python -y \
