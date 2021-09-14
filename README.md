@@ -101,7 +101,7 @@ Steps to restore the dataset :
 
 ### MongoDB (database)
 
-`docker run --restart always --name sdiomongo -p 27017:27017 -d -v ~/sdio/mongodb:/data -v ~/sdio/mongodb/db:/data/db --network=sdionet mongo:3.4`
+`docker run --restart always --name sdiomongo -p 27017:27017 -d -v ~/sdio/mongodb:/data -v ~/sdio/mongodb/db:/data/db --network=sdionet mongo:4.2`
 
 
 <br>
